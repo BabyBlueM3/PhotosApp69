@@ -24,7 +24,6 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
     private RecyclerView recyclerView;
     private PhotoAdapter adapter;
     private TextView albumTitleView;
-    private TextView selectionInfoView;
     private LinearLayout emptyStateView;
     private Button btnOpen, btnRename, btnDelete, btnCreate;
 
@@ -61,7 +60,6 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
         albumTitleView.setText(albumName);
 
         recyclerView = findViewById(R.id.recycler_photos);
-        selectionInfoView = findViewById(R.id.txt_selection_info);
         emptyStateView = findViewById(R.id.empty_state);
 
         btnOpen = findViewById(R.id.btn_view);
@@ -190,8 +188,7 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
 
     @Override
     public void onSelectionChanged(int count) {
-        selectionInfoView.setText(count > 0 ? "1 selected" : "0 selected");
-        selectionInfoView.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
+        // Just update button states based on selection count
         updateButtonStates(count > 0);
     }
 }

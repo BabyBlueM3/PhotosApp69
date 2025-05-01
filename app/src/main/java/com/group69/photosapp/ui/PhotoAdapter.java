@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -69,8 +68,6 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
         // Handle selection state
         boolean isSelected = (position == selectedPosition);
         holder.selectionOverlay.setVisibility(isSelected ? View.VISIBLE : View.GONE);
-        holder.checkBox.setVisibility(isSelectionMode ? View.VISIBLE : View.GONE);
-        holder.checkBox.setChecked(isSelected);
     }
     
     @Override
@@ -164,14 +161,12 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
         ImageView imageView;
         TextView captionText;
         View selectionOverlay;
-        CheckBox checkBox;
         
         public PhotoViewHolder(@NonNull View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.img_photo);
             captionText = itemView.findViewById(R.id.txt_caption);
             selectionOverlay = itemView.findViewById(R.id.selection_overlay);
-            checkBox = itemView.findViewById(R.id.checkbox_select);
             
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
