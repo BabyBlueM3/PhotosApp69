@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.widget.EditText;
+import android.content.Intent;
 
 
 import com.group69.photosapp.Album;
@@ -103,9 +104,14 @@ public class HomeActivity extends AppCompatActivity {
         btnOpen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Handle open button click
-                // This would typically open the selected album
-                Toast.makeText(HomeActivity.this, "Open button clicked", Toast.LENGTH_SHORT).show();
+                // Create an intent to navigate to AlbumActivity
+                Intent intent = new Intent(HomeActivity.this, AlbumActivity.class);
+
+                // Optional: You can pass album data if needed
+                // intent.putExtra("album_id", selectedAlbumId);
+
+                // Start the AlbumActivity
+                startActivity(intent);
             }
         });
 
