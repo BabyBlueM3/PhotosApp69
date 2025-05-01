@@ -59,7 +59,7 @@
 
         <!-- Open Button -->
         <Button
-            android:id="@+id/btn_open"
+            android:id="@+id/btn_view"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -72,7 +72,7 @@
 
         <!-- Rename Button -->
         <Button
-            android:id="@+id/btn_rename"
+            android:id="@+id/btn_move"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -100,7 +100,7 @@
 
         <!-- Create Button -->
         <Button
-            android:id="@+id/btn_create"
+            android:id="@+id/btn_upload"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
