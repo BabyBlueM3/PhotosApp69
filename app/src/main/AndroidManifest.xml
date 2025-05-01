@@ -29,6 +29,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.AlbumActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light">
+        </activity>
+
     </application>
 
 </manifest>
