@@ -4,45 +4,81 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="ui.HomeActivity">
+    tools:context=".AlbumActivity">
 
-    <!-- Search Bar -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/search_bar_container"
-        android:layout_width="0dp"
+    <!-- Album Title -->
+    <TextView
+        android:id="@+id/txt_album_title"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="4dp"
+        android:background="#EFEFEF"
+        android:elevation="4dp"
+        android:padding="16dp"
+        android:text="Album Name"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:textColor="#000000"
+        android:textSize="24sp"
+        android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <androidx.appcompat.widget.SearchView
-            android:id="@+id/search_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:iconifiedByDefault="false"
-            android:queryHint="Search albums" />
-    </androidx.cardview.widget.CardView>
-
-    <!-- Albums RecyclerView -->
+    <!-- Photo Grid -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/albums_recycler_view"
+        android:id="@+id/recycler_photos"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
         android:clipToPadding="false"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="16dp"
+        android:padding="4dp"
         app:layout_constraintBottom_toTopOf="@+id/buttons_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/search_bar_container"
-        tools:listitem="@layout/item_album" />
+        app:layout_constraintTop_toBottomOf="@+id/txt_album_title"
+        tools:itemCount="16"
+        tools:listitem="@layout/item_photo" />
+
+    <!-- Selection Info Text (Visible when photos are selected) -->
+
+    <!-- Empty State View -->
+    <LinearLayout
+        android:id="@+id/empty_state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/buttons_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txt_album_title"
+        tools:visibility="gone">
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:alpha="0.5"
+            android:contentDescription="No photos"
+            android:src="@drawable/ic_no_photos" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="No photos in this album"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="#757575" />
+
+        <Button
+            android:id="@+id/btn_add_photos"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Add Photos" />
+    </LinearLayout>
 
     <!-- Bottom Buttons Container -->
     <LinearLayout
@@ -65,7 +101,7 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
-            android:text="Open"
+            android:text="View"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="#0F0C0C"
             android:textSize="16sp" />
@@ -79,7 +115,7 @@
             android:layout_marginStart="4dp"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
-            android:text="Rename"
+            android:text="Move"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="#121010"
             android:textSize="16sp" />
@@ -106,7 +142,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_weight="1"
-            android:text="Create"
+            android:text="Upload"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="#000000"
             android:textSize="16sp" />
