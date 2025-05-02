@@ -67,4 +67,14 @@ public class Album implements Serializable {
     public String toString() {
         return "Album [name=" + name + ", numberOfPhotos=" + photos.size() + "]";
     }
+
+    public boolean containsPhoto(PhotoFile photo) {
+        for (PhotoFile p : photos) {
+            if (p.getFilePath().equals(photo.getFilePath())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

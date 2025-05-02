@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -73,15 +74,25 @@ public class ViewActivity extends AppCompatActivity {
 
     private void handleIntent() {
         Intent intent = getIntent();
+
         if (intent != null && intent.hasExtra("photoFile")) {
-            photoFile = intent.getSerializableExtra("photoFile", PhotoFile.class);
-            loadImage();
-            updateTagsDisplay();
+            // Correctly cast the received object to PhotoFile
+            photoFile = (PhotoFile) intent.getSerializableExtra("photoFile");
+
+            if (photoFile != null) {
+                loadImage();
+                updateTagsDisplay();
+            } else {
+                Toast.makeText(this, "Error: No photo data received", Toast.LENGTH_SHORT).show();
+                finish(); // Close activity if no photo data
+            }
         } else {
+            System.out.println("food");
             Toast.makeText(this, "No photo data received", Toast.LENGTH_SHORT).show();
             finish(); // Close activity if no photo data
         }
     }
+
 
     private void loadImage() {
         try {

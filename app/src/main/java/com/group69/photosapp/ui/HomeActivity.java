@@ -20,6 +20,7 @@ import android.content.Intent;
 
 
 import com.group69.photosapp.Album;
+import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
 
@@ -61,6 +62,10 @@ public class HomeActivity extends AppCompatActivity {
         albumAdapter = new AlbumAdapter(this, albumList);
         albumsRecyclerView.setAdapter(albumAdapter);
 
+        // Assuming albumList is already populated
+        PhotoData.getInstance().setAlbums(albumList);
+
+
 
         // Copy stock photos to internal storage if necessary
         copyStockPhotosIfNeeded();
@@ -101,19 +106,17 @@ public class HomeActivity extends AppCompatActivity {
         btnDelete = findViewById(R.id.btn_delete);
         btnCreate = findViewById(R.id.btn_create);
 
-        btnOpen.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Create an intent to navigate to AlbumActivity
-                Intent intent = new Intent(HomeActivity.this, AlbumActivity.class);
-
-                // Optional: You can pass album data if needed
-                // intent.putExtra("album_id", selectedAlbumId);
-
-                // Start the AlbumActivity
-                startActivity(intent);
+        btnOpen.setOnClickListener(v -> {
+            for (Album album : albumList) {
+                if (album.isSelected()) {
+                    Intent intent = new Intent(HomeActivity.this, AlbumActivity.class);
+                    intent.putExtra("ALBUM_NAME", album.getName()); // <-- pass selected album
+                    startActivity(intent);
+                    break;
+                }
             }
         });
+
 
         btnRename.setOnClickListener(new View.OnClickListener() {
             @Override

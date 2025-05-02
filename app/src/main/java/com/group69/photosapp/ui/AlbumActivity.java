@@ -1,21 +1,33 @@
 package com.group69.photosapp.ui;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Intent;
+import android.util.Log;
 
+
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.group69.photosapp.Album;
 import com.group69.photosapp.PhotoAdapter;
+import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
+import java.io.File;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +37,9 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
     private PhotoAdapter adapter;
     private TextView albumTitleView;
     private LinearLayout emptyStateView;
-    private Button btnOpen, btnRename, btnDelete, btnCreate;
+    private Button btnView, btnMove, btnDelete, btnUpload;
+    private Album currentAlbum;
+    private static final int REQUEST_CODE_UPLOAD = 1001;
 
     private String albumName;
     private List<PhotoFile> photoList = new ArrayList<>();
@@ -38,8 +52,16 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
 
         // Get album name from intent
         albumName = getIntent().getStringExtra("ALBUM_NAME");
-        if (albumName == null) {
-            albumName = "Album";
+
+
+        // Get the album object from PhotoData
+        currentAlbum = PhotoData.getInstance().getAlbumByName(albumName);
+        System.out.println(currentAlbum);
+        // If album is found, set the title to the album's name
+        if (currentAlbum != null) {
+            albumName = currentAlbum.getName();  // Get the actual album name from the album object
+        } else {
+            albumName = "Album";  // Fallback in case the album is not found
         }
 
         // Initialize UI elements
@@ -62,30 +84,72 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
         recyclerView = findViewById(R.id.recycler_photos);
         emptyStateView = findViewById(R.id.empty_state);
 
-        btnOpen = findViewById(R.id.btn_view);
-        btnRename = findViewById(R.id.btn_move);
+        btnView = findViewById(R.id.btn_view);
+        btnMove = findViewById(R.id.btn_move);
         btnDelete = findViewById(R.id.btn_delete);
-        btnCreate = findViewById(R.id.btn_upload);
+        btnUpload = findViewById(R.id.btn_upload);
 
         // Initially disable buttons that require selection
         updateButtonStates(false);
     }
 
     private void loadPhotosFromAlbum() {
-        // TODO: Implement loading photos from storage based on album name
-        // This is a placeholder - you'll need to implement actual photo loading
-        
-        // For demonstration, let's add some placeholder photos
-        photoList = new ArrayList<>();
-        
-        // Add sample photos for demonstration
-        // In a real app, you'd load these from storage
-        photoList.add(new PhotoFile("/path/to/photo1.jpg", "Beach sunset"));
-        photoList.add(new PhotoFile("/path/to/photo2.jpg", "Mountain view"));
-        photoList.add(new PhotoFile("/path/to/photo3.jpg", "Family dinner"));
-        // Add more photos as needed
-        
-        // Update UI based on whether photos exist
+        // Fetch the album using the passed name from HomeActivity
+        String albumName = getIntent().getStringExtra("ALBUM_NAME");
+        Log.d("AlbumActivity", "Opening album: " + albumName);
+
+        if (albumName == null) {
+            Toast.makeText(this, "No album name received", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Fetch the album from PhotoData by album name
+        currentAlbum = PhotoData.getInstance().getAlbumByName(albumName);
+
+        // If the album is not found, create it and add it to PhotoData
+        if (currentAlbum == null) {
+            currentAlbum = new Album(albumName);
+            PhotoData.getInstance().addAlbum(currentAlbum);
+        }
+
+        // Now we can safely get the photos of the current album
+        photoList = currentAlbum.getPhotos();
+
+        // If it's the "Stock" album, load photos from the "stock" directory
+        if (albumName.equalsIgnoreCase("Stock")) {
+            // Ensure stock photos are not already added to the list
+            File stockDir = new File(getFilesDir(), "stock");
+            File[] photoFiles = stockDir.listFiles((dir, name) -> {
+                String lower = name.toLowerCase();
+                return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png");
+            });
+
+            // Add stock photos to the list only if they are not already added
+            if (photoFiles != null) {
+                for (File file : photoFiles) {
+                    String path = file.getAbsolutePath();
+                    String caption = file.getName();
+                    boolean exists = false;
+
+                    // Check if the photo is already in the album to avoid duplicates
+                    for (PhotoFile existingPhoto : photoList) {
+                        if (existingPhoto.getCaption().equals(caption)) {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    // Only add the photo if it doesn't already exist in the list
+                    if (!exists) {
+                        photoList.add(new PhotoFile(path, caption));
+                    }
+                }
+            }
+        }
+
+        Log.d("PhotoData", "Loaded photos: " + photoList.size());
+
+        // Update UI based on whether the album has photos
         if (photoList.isEmpty()) {
             recyclerView.setVisibility(View.GONE);
             emptyStateView.setVisibility(View.VISIBLE);
@@ -93,7 +157,16 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
             recyclerView.setVisibility(View.VISIBLE);
             emptyStateView.setVisibility(View.GONE);
         }
+
+        // Set up the adapter and notify it with the photo list
+        PhotoAdapter adapter = new PhotoAdapter(this, photoList);
+        recyclerView.setAdapter(adapter);
+        adapter.updatePhotoList(photoList);
+        adapter.notifyDataSetChanged();
     }
+
+
+
 
     private void setupRecyclerView() {
         // Create grid layout with 4 columns
@@ -108,23 +181,30 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
     }
 
     private void setupButtonListeners() {
-        btnOpen.setOnClickListener(v -> {
+
+        btnView.setOnClickListener(v -> {
             List<PhotoFile> selectedPhotos = adapter.getSelectedPhotos();
             if (selectedPhotos.size() == 1) {
-                openPhotoViewer(selectedPhotos.get(0));
+                PhotoFile photoFile = selectedPhotos.get(0);
+                Intent intent = new Intent(AlbumActivity.this, ViewActivity.class);
+                intent.putExtra("photoFile", photoFile);
+                startActivity(intent);
             } else {
-                Toast.makeText(this, "Please select a photo to open", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please select a photo to view", Toast.LENGTH_SHORT).show();
             }
         });
 
-        btnRename.setOnClickListener(v -> {
+
+
+        btnMove.setOnClickListener(v -> {
             List<PhotoFile> selectedPhotos = adapter.getSelectedPhotos();
             if (selectedPhotos.size() == 1) {
-                showRenameDialog(selectedPhotos);
+                showMoveDialog(selectedPhotos.get(0)); // single photo
             } else {
-                Toast.makeText(this, "Please select a photo to rename", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please select a single photo to move", Toast.LENGTH_SHORT).show();
             }
         });
+
 
         btnDelete.setOnClickListener(v -> {
             List<PhotoFile> selectedPhotos = adapter.getSelectedPhotos();
@@ -135,10 +215,13 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
             }
         });
 
-        btnCreate.setOnClickListener(v -> {
+        btnUpload.setOnClickListener(v -> {
             // Create new photo or album functionality
             // This could open camera or file picker
-            Toast.makeText(this, "Create functionality to be implemented", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true); // allow multiple selection
+            startActivityForResult(Intent.createChooser(intent, "Select Pictures"), REQUEST_CODE_UPLOAD);
         });
     }
 
@@ -172,10 +255,131 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
                 .show();
     }
 
+    private void showMoveDialog(PhotoFile photoToMove) {
+        // Replace with your actual album list
+        List<Album> allAlbums = PhotoData.getInstance().getAlbums(); // or however you get them
+        List<String> albumNames = new ArrayList<>();
+        for (Album album : allAlbums) {
+            System.out.println(album);
+            // Exclude current album
+            if (!album.getName().equals(currentAlbum.getName())) {
+                albumNames.add(album.getName());
+            }
+        }
+
+        if (albumNames.isEmpty()) {
+            Toast.makeText(this, "No other albums available to move to", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] albumsArray = albumNames.toArray(new String[0]);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select Album to Move To");
+        builder.setItems(albumsArray, (dialog, which) -> {
+            String targetAlbumName = albumsArray[which];
+            movePhotoToAlbum(photoToMove, targetAlbumName);
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+
+    private void movePhotoToAlbum(PhotoFile photo, String targetAlbumName) {
+        List<Album> allAlbums = PhotoData.getInstance().getAlbums();
+        Album targetAlbum = null;
+        for (Album album : allAlbums) {
+            if (album.getName().equals(targetAlbumName)) {
+                targetAlbum = album;
+                break;
+            }
+        }
+
+        if (targetAlbum == null) {
+            Toast.makeText(this, "Target album not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (targetAlbum.containsPhoto(photo)) {
+            Toast.makeText(this, "Photo already exists in that album", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        currentAlbum.removePhoto(photo); // however you track current album
+        targetAlbum.addPhoto(photo);
+        PhotoData.getInstance().saveData(); // persist if needed
+
+        Toast.makeText(this, "Photo moved to " + targetAlbumName, Toast.LENGTH_SHORT).show();
+
+        // Update adapter
+        adapter.updatePhotoList(currentAlbum.getPhotos());
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE_UPLOAD && resultCode == RESULT_OK) {
+            if (data == null) return;
+
+            if (data.getClipData() != null) {
+                // Multiple images selected
+                int count = data.getClipData().getItemCount();
+                for (int i = 0; i < count; i++) {
+                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                    addPhotoToAlbum(imageUri);
+                }
+            } else if (data.getData() != null) {
+                // Single image selected
+                Uri imageUri = data.getData();
+                addPhotoToAlbum(imageUri);
+            }
+
+            adapter.notifyDataSetChanged();
+            updateEmptyState();
+        }
+    }
+    private void addPhotoToAlbum(Uri imageUri) {
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(imageUri);
+            String fileName = System.currentTimeMillis() + ".jpg"; // Unique name
+            File photoFile = new File(getFilesDir(), fileName);
+            OutputStream outputStream = new FileOutputStream(photoFile);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+            inputStream.close();
+            outputStream.close();
+
+            PhotoFile newPhoto = new PhotoFile(photoFile.getAbsolutePath(), fileName);
+            currentAlbum.addPhoto(newPhoto);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error uploading photo", Toast.LENGTH_SHORT).show();
+        }
+    }
+    private void updateEmptyState() {
+        if (photoList.isEmpty()) {
+            recyclerView.setVisibility(View.GONE);
+            emptyStateView.setVisibility(View.VISIBLE);
+        } else {
+            recyclerView.setVisibility(View.VISIBLE);
+            emptyStateView.setVisibility(View.GONE);
+        }
+    }
+
+
+
+
     // Update button states based on selection
     private void updateButtonStates(boolean hasSelection) {
-        btnOpen.setEnabled(hasSelection);
-        btnRename.setEnabled(hasSelection);
+        btnView.setEnabled(hasSelection);
+        btnMove.setEnabled(hasSelection);
         btnDelete.setEnabled(hasSelection);
         // Create button is always enabled
     }
