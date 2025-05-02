@@ -4,36 +4,100 @@ import android.content.Context;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 
-public class Database {
+public class Database implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final String DATA_FILENAME = "photo_database.dat";
 
-    // Save users to a file in internal storage
-    public static void saveUsers(Context context, ArrayList<User> users) {
+    private static Database instance;
+
+    private ArrayList<Album> albums;
+    private HashSet<String> personTags;
+    private HashSet<String> locationTags;
+
+    private Database() {
+        albums = new ArrayList<>();
+        personTags = new HashSet<>();
+        locationTags = new HashSet<>();
+    }
+
+    public static Database getInstance() {
+        if (instance == null) {
+            instance = new Database();
+        }
+        return instance;
+    }
+
+    // Save the entire database to internal storage
+    public void save(Context context) {
         try {
-            // Open a private file in internal storage
-            FileOutputStream fileOut = context.openFileOutput("users.dat", Context.MODE_PRIVATE);
-            ObjectOutputStream out = new ObjectOutputStream(fileOut);
-            out.writeObject(users);
-            out.close();
-            fileOut.close();
-        } catch (IOException i) {
-            i.printStackTrace();
+            FileOutputStream fos = context.openFileOutput(DATA_FILENAME, Context.MODE_PRIVATE);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(instance);
+            oos.close();
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    // Load users from the file in internal storage
-    @SuppressWarnings("unchecked")
-    public static ArrayList<User> loadUsers(Context context) {
+    // Load the database from internal storage
+    public static void load(Context context) {
         try {
-            FileInputStream fileIn = context.openFileInput("users.dat");
-            ObjectInputStream in = new ObjectInputStream(fileIn);
-            ArrayList<User> users = (ArrayList<User>) in.readObject();
-            in.close();
-            fileIn.close();
-            return users;
+            FileInputStream fis = context.openFileInput(DATA_FILENAME);
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            instance = (Database) ois.readObject();
+            ois.close();
+            fis.close();
         } catch (IOException | ClassNotFoundException e) {
-            // If no file found or error occurs, return an empty list
-            return new ArrayList<>();
+            instance = new Database(); // fallback if no saved data yet
         }
+    }
+
+    // --- Album operations ---
+    public ArrayList<Album> getAlbums() {
+        return albums;
+    }
+
+    public void setAlbums(ArrayList<Album> albums) {
+        this.albums = albums;
+    }
+
+    public void addAlbum(Album album) {
+        albums.add(album);
+    }
+
+    public void removeAlbum(Album album) {
+        albums.remove(album);
+    }
+
+    // --- Tag operations ---
+    public HashSet<String> getPersonTags() {
+        return personTags;
+    }
+
+    public HashSet<String> getLocationTags() {
+        return locationTags;
+    }
+
+    public void addPersonTag(String tag) {
+        if (tag != null && !tag.isEmpty()) {
+            personTags.add(tag);
+        }
+    }
+
+    public void addLocationTag(String tag) {
+        if (tag != null && !tag.isEmpty()) {
+            locationTags.add(tag);
+        }
+    }
+
+    public void removePersonTag(String tag) {
+        personTags.remove(tag);
+    }
+
+    public void removeLocationTag(String tag) {
+        locationTags.remove(tag);
     }
 }

@@ -16,10 +16,13 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.group69.photosapp.Album;
+import com.group69.photosapp.Database;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
 import com.group69.photosapp.Tag;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ViewActivity extends AppCompatActivity {
@@ -32,6 +35,10 @@ public class ViewActivity extends AppCompatActivity {
     private Button slideshowLeft;
     private Button slideshowRight;
 
+    private List<PhotoFile> photoList;
+    private int currentIndex;
+
+
     // Reference to the PhotoFile object
     private PhotoFile photoFile;
 
@@ -43,6 +50,10 @@ public class ViewActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_view);
+
+
+        // Load the database to get stored tags
+        Database.load(getApplicationContext());
 
         // Register back press callback
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -72,26 +83,34 @@ public class ViewActivity extends AppCompatActivity {
         slideshowRight = findViewById(R.id.slideshowRight);
     }
 
+    @SuppressWarnings("unchecked")
     private void handleIntent() {
         Intent intent = getIntent();
 
-        if (intent != null && intent.hasExtra("photoFile")) {
-            // Correctly cast the received object to PhotoFile
-            photoFile = (PhotoFile) intent.getSerializableExtra("photoFile");
+        if (intent != null && intent.hasExtra("photoList") && intent.hasExtra("photoIndex")) {
+            photoList = (ArrayList<PhotoFile>) intent.getSerializableExtra("photoList");
+            currentIndex = intent.getIntExtra("photoIndex", 0);
 
-            if (photoFile != null) {
-                loadImage();
-                updateTagsDisplay();
-            } else {
-                Toast.makeText(this, "Error: No photo data received", Toast.LENGTH_SHORT).show();
-                finish(); // Close activity if no photo data
+            if (photoList == null || photoList.isEmpty()) {
+                Toast.makeText(this, "No photos to display", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
             }
+
+            if (currentIndex < 0 || currentIndex >= photoList.size()) {
+                Toast.makeText(this, "Invalid photo index", Toast.LENGTH_SHORT).show();
+                currentIndex = 0;
+            }
+
+            photoFile = photoList.get(currentIndex);
+            loadImage();
+            updateTagsDisplay();
         } else {
-            System.out.println("food");
-            Toast.makeText(this, "No photo data received", Toast.LENGTH_SHORT).show();
-            finish(); // Close activity if no photo data
+            Toast.makeText(this, "Missing photo data", Toast.LENGTH_SHORT).show();
+            finish();
         }
     }
+
 
 
     private void loadImage() {
@@ -133,7 +152,33 @@ public class ViewActivity extends AppCompatActivity {
     private void setupClickListeners() {
         editPersonButton.setOnClickListener(v -> showEditTagDialog(TAG_PERSON));
         editLocationButton.setOnClickListener(v -> showEditTagDialog(TAG_LOCATION));
+
+        slideshowLeft.setOnClickListener(v -> showPreviousPhoto());
+        slideshowRight.setOnClickListener(v -> showNextPhoto());
     }
+    private void showNextPhoto() {
+        if (currentIndex < photoList.size() - 1) {
+            currentIndex++;
+            photoFile = photoList.get(currentIndex);
+            loadImage();
+            updateTagsDisplay();
+        } else {
+            Toast.makeText(this, "This is the last photo.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showPreviousPhoto() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            photoFile = photoList.get(currentIndex);
+            loadImage();
+            updateTagsDisplay();
+        } else {
+            Toast.makeText(this, "This is the first photo.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
 
     private void showEditTagDialog(String tagType) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -195,12 +240,25 @@ public class ViewActivity extends AppCompatActivity {
     }
 
     private void updateTag(String tagName, String tagValue) {
-        // First remove existing tag with same name if exists
-        removeTag(tagName);
-
-        // Then add new tag
+        // Update the tag in the photoFile
+        removeTag(tagName);  // Remove existing tag
         Tag newTag = new Tag(tagName, tagValue);
         photoFile.addTag(newTag);
+
+        // Save the tag to the Database
+        if (tagName.equals(TAG_PERSON)) {
+            Database.getInstance().addPersonTag(tagValue);  // Add to person tags
+            System.out.println("savvvveeee");
+        } else if (tagName.equals(TAG_LOCATION)) {
+            Database.getInstance().addLocationTag(tagValue);  // Add to location tags
+            System.out.println("dasfasdfasdf");
+        }
+
+        // Save the updated database to disk
+        Database.getInstance().save(getApplicationContext());
+
+        // Update UI
+        updateTagsDisplay();
     }
 
     /**
@@ -220,4 +278,6 @@ public class ViewActivity extends AppCompatActivity {
         setResult(RESULT_OK, resultIntent);
         finish(); // Replace super.onBackPressed()
     }
+
+
 }

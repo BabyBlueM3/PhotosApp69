@@ -20,6 +20,7 @@ import android.content.Intent;
 
 
 import com.group69.photosapp.Album;
+import com.group69.photosapp.Database;
 import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 public class HomeActivity extends AppCompatActivity {
@@ -44,6 +46,9 @@ public class HomeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
+        // Load the database from storage (only once)
+        Database.load(getApplicationContext());
+
         // Initialize the RecyclerView
         albumsRecyclerView = findViewById(R.id.albums_recycler_view);
 
@@ -53,10 +58,23 @@ public class HomeActivity extends AppCompatActivity {
         // Initialize album list
         albumList = new ArrayList<>();
 
-        // Add sample albums (in a real app, you would load these from your data source)
-        albumList.add(new Album("Vacation 2024"));
-        albumList.add(new Album("Family Photos"));
-        albumList.add(new Album("Nature"));
+        // Add sample albums (if they aren't already in the database or albumList)
+        if (albumList.isEmpty()) {
+            albumList.add(new Album("Vacation 2024"));
+            albumList.add(new Album("Family Photos"));
+            albumList.add(new Album("Nature"));
+        }
+
+        // Access the albums from the database (if any)
+        ArrayList<Album> storedAlbums = Database.getInstance().getAlbums();
+        if (storedAlbums != null) {
+            // Avoid duplicates, only add albums that are not already in the list
+            for (Album album : storedAlbums) {
+                if (!albumList.contains(album)) {
+                    albumList.add(album);
+                }
+            }
+        }
 
         // Initialize and set adapter
         albumAdapter = new AlbumAdapter(this, albumList);
@@ -65,17 +83,11 @@ public class HomeActivity extends AppCompatActivity {
         // Assuming albumList is already populated
         PhotoData.getInstance().setAlbums(albumList);
 
-
-
         // Copy stock photos to internal storage if necessary
         copyStockPhotosIfNeeded();
 
         // Load the albums into the album list
         loadAlbums();
-
-
-
-
 
         // Setup search functionality
         SearchView searchView = findViewById(R.id.search_view);
@@ -99,6 +111,7 @@ public class HomeActivity extends AppCompatActivity {
         // Update the button states initially
         updateButtonStates();
     }
+
 
     private void initializeButtons() {
         btnOpen = findViewById(R.id.btn_open);
@@ -169,6 +182,10 @@ public class HomeActivity extends AppCompatActivity {
                                         albumList.remove(album);
                                         albumAdapter.updateAlbums(albumList);
                                         updateButtonStates();
+
+                                        // Remove album from the database
+                                        removeAlbumFromDatabase(album);
+
                                         Toast.makeText(HomeActivity.this, "Album deleted", Toast.LENGTH_SHORT).show();
                                     }
                                 })
@@ -180,6 +197,7 @@ public class HomeActivity extends AppCompatActivity {
                 }
             }
         });
+
 
         btnCreate.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -211,6 +229,10 @@ public class HomeActivity extends AppCompatActivity {
                                 albumList.add(newAlbum);
                                 albumAdapter.updateAlbums(albumList);
                                 updateButtonStates();
+
+                                // Add album to the database
+                                addAlbumToDatabase(newAlbum);
+
                                 Toast.makeText(HomeActivity.this, "Album created", Toast.LENGTH_SHORT).show();
                             }
                         } else {
@@ -339,5 +361,15 @@ public class HomeActivity extends AppCompatActivity {
                 Toast.makeText(this, "Failed to copy stock photos", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+    public void addAlbumToDatabase(Album album) {
+        System.out.println("fuck");
+        Database.getInstance().addAlbum(album);  // Add album to Database
+        Database.getInstance().save(getApplicationContext());  // Save the updated database
+    }
+
+    public void removeAlbumFromDatabase(Album album) {
+        Database.getInstance().removeAlbum(album);  // Remove album from Database
+        Database.getInstance().save(getApplicationContext());  // Save the updated database
     }
 }

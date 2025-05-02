@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.group69.photosapp.Album;
+import com.group69.photosapp.Database;
 import com.group69.photosapp.PhotoAdapter;
 import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
@@ -52,6 +53,10 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
 
         // Get album name from intent
         albumName = getIntent().getStringExtra("ALBUM_NAME");
+
+        // In your onCreate() or similar method
+        Intent intent = getIntent();
+        Album album = (Album) intent.getSerializableExtra("album");
 
 
         // Get the album object from PhotoData
@@ -186,13 +191,28 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
             List<PhotoFile> selectedPhotos = adapter.getSelectedPhotos();
             if (selectedPhotos.size() == 1) {
                 PhotoFile photoFile = selectedPhotos.get(0);
-                Intent intent = new Intent(AlbumActivity.this, ViewActivity.class);
-                intent.putExtra("photoFile", photoFile);
-                startActivity(intent);
+
+                // Use the existing currentAlbum reference
+                List<PhotoFile> photoList = currentAlbum.getPhotos();
+
+                int index = photoList.indexOf(photoFile); // Find the position of the selected photo
+
+                if (index != -1) {
+                    Intent intent = new Intent(AlbumActivity.this, ViewActivity.class);
+                    intent.putExtra("photoList", new ArrayList<>(photoList));
+                    intent.putExtra("photoIndex", index);
+                    intent.putExtra("photoFile", photoFile); // Send the selected photo as well
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(this, "Photo not found in album", Toast.LENGTH_SHORT).show();
+                }
             } else {
                 Toast.makeText(this, "Please select a photo to view", Toast.LENGTH_SHORT).show();
             }
         });
+
+
+
 
 
 
@@ -395,4 +415,7 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
         // Just update button states based on selection count
         updateButtonStates(count > 0);
     }
+
+
+
 }
