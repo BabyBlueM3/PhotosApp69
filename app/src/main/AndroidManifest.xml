@@ -35,6 +35,11 @@
             android:theme="@style/Theme.AppCompat.Light">
         </activity>
 
+        <activity
+            android:name=".ui.ViewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light">
+        </activity>
     </application>
 
 </manifest>
