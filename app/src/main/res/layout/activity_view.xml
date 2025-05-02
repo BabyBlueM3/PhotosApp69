@@ -34,8 +34,8 @@
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="410dp"
-        android:layout_height="501dp"
+        android:layout_width="411dp"
+        android:layout_height="503dp"
         android:background="#F5F5F5"
         android:contentDescription="Selected Image"
         android:scaleType="fitCenter"
