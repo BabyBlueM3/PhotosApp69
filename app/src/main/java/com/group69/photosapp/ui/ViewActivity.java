@@ -67,6 +67,8 @@ public class ViewActivity extends AppCompatActivity {
         locationTagValue = findViewById(R.id.locationTagValue);
         editPersonButton = findViewById(R.id.editPersonButton);
         editLocationButton = findViewById(R.id.editLocationButton);
+        slideshowLeft = findViewById(R.id.slideshowLeft);
+        slideshowRight = findViewById(R.id.slideshowRight);
     }
 
     private void handleIntent() {
