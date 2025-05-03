@@ -16,13 +16,13 @@ public class Database implements Serializable {
     private static Database instance;
 
     private ArrayList<Album> albums;
-    private HashSet<String> personTags;
-    private HashSet<String> locationTags;
+    private ArrayList<String> personTags;
+    private ArrayList<String> locationTags;
 
     private Database() {
         albums = new ArrayList<>();
-        personTags = new HashSet<>();
-        locationTags = new HashSet<>();
+        personTags = new ArrayList<>();
+        locationTags = new ArrayList<>();
     }
 
     public static Database getInstance() {
@@ -76,11 +76,11 @@ public class Database implements Serializable {
     }
 
     // --- Tag operations ---
-    public HashSet<String> getPersonTags() {
+    public ArrayList<String> getPersonTags() {
         return personTags;
     }
 
-    public HashSet<String> getLocationTags() {
+    public ArrayList<String> getLocationTags() {
         return locationTags;
     }
 

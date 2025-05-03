@@ -93,12 +93,11 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
 
         // In your onCreate() or similar method
         Intent intent = getIntent();
-        Album album = (Album) intent.getSerializableExtra("album");
 
 
         // Get the album object from PhotoData
         currentAlbum = PhotoData.getInstance().getAlbumByName(albumName);
-        System.out.println(currentAlbum);
+
         // If album is found, set the title to the album's name
         if (currentAlbum != null) {
             albumName = currentAlbum.getName();  // Get the actual album name from the album object
@@ -165,37 +164,6 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
         // Now we can safely get the photos of the current album
         photoList = currentAlbum.getPhotos();
 
-        // If it's the "Stock" album, load photos from the "stock" directory
-        if (albumName.equalsIgnoreCase("Stock")) {
-            // Ensure stock photos are not already added to the list
-            File stockDir = new File(getFilesDir(), "stock");
-            File[] photoFiles = stockDir.listFiles((dir, name) -> {
-                String lower = name.toLowerCase();
-                return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png");
-            });
-
-            // Add stock photos to the list only if they are not already added
-            if (photoFiles != null) {
-                for (File file : photoFiles) {
-                    String path = file.getAbsolutePath();
-                    String caption = file.getName();
-                    boolean exists = false;
-
-                    // Check if the photo is already in the album to avoid duplicates
-                    for (PhotoFile existingPhoto : photoList) {
-                        if (existingPhoto.getCaption().equals(caption)) {
-                            exists = true;
-                            break;
-                        }
-                    }
-
-                    // Only add the photo if it doesn't already exist in the list
-                    if (!exists) {
-                        photoList.add(new PhotoFile(path, caption));
-                    }
-                }
-            }
-        }
 
         Log.d("PhotoData", "Loaded photos: " + photoList.size());
 
@@ -325,7 +293,7 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
         List<Album> allAlbums = PhotoData.getInstance().getAlbums(); // or however you get them
         List<String> albumNames = new ArrayList<>();
         for (Album album : allAlbums) {
-            System.out.println(album);
+
             // Exclude current album
             if (!album.getName().equals(currentAlbum.getName())) {
                 albumNames.add(album.getName());

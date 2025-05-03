@@ -46,20 +46,15 @@ public class HomeActivity extends AppCompatActivity {
 
     private RecyclerView albumsRecyclerView;
     private AlbumAdapter albumAdapter;
-    private List<Album> albumList;
+    private ArrayList<Album> albumList;
     private Button btnOpen, btnRename, btnDelete, btnCreate, btnSearch;
     private AutoCompleteTextView searchLocation, searchPerson;
     private Spinner searchOperator;
 
     // Sample tag data for autocomplete suggestions
-    private List<String> locationTags = new ArrayList<>(Arrays.asList(
-            "new york", "new jersey", "boston", "chicago", "san francisco",
-            "los angeles", "seattle", "miami", "denver", "austin",
-            "washington dc", "nashville", "new orleans"));
+    private ArrayList<String> locationTags;
 
-    private List<String> personTags = new ArrayList<>(Arrays.asList(
-            "john", "jane", "bob", "alice", "michael", "sarah",
-            "david", "emma", "james", "olivia", "robert", "emily"));
+    private ArrayList<String> personTags;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,15 +70,8 @@ public class HomeActivity extends AppCompatActivity {
         // Set layout manager (2 columns grid)
         albumsRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
 
-        // Initialize album list
-        albumList = new ArrayList<>();
 
-        // Add sample albums (if they aren't already in the database or albumList)
-        if (albumList.isEmpty()) {
-            albumList.add(new Album("Vacation 2024"));
-            albumList.add(new Album("Family Photos"));
-            albumList.add(new Album("Nature"));
-        }
+
 
         // Access the albums from the database (if any)
         ArrayList<Album> storedAlbums = Database.getInstance().getAlbums();
@@ -93,8 +81,14 @@ public class HomeActivity extends AppCompatActivity {
                 if (!albumList.contains(album)) {
                     albumList.add(album);
                 }
+
             }
         }
+
+        // Load the autocomplete lists
+        locationTags = Database.getInstance().getLocationTags();
+        personTags = Database.getInstance().getPersonTags();
+
 
         // Initialize and set adapter
         albumAdapter = new AlbumAdapter(this, albumList);
@@ -103,12 +97,8 @@ public class HomeActivity extends AppCompatActivity {
         // Assuming albumList is already populated
         PhotoData.getInstance().setAlbums(albumList);
 
-        // Copy stock photos to internal storage if necessary
-        copyStockPhotosIfNeeded();
-
         // Load the albums into the album list
         loadAlbums();
-
 
         // Initialize search components
         initializeSearchComponents();
@@ -506,7 +496,24 @@ public class HomeActivity extends AppCompatActivity {
 
             // Check if the stock directory exists
             if (stockDir.exists() && stockDir.isDirectory()) {
-                Album stockAlbum = new Album("Stock");
+                Album stockAlbum = null;
+
+                // Check if the stock album already exists in the album list
+                for (Album album : albumList) {
+                    if (album.getName().equals("Stock")) {
+                        stockAlbum = album;
+                        break;
+                    }
+                }
+
+                // If stock album already exists, skip loading
+                if (stockAlbum != null) {
+                    return;
+                }
+
+                // Stock album doesn't exist — create and populate it
+                stockAlbum = new Album("Stock");
+                albumList.add(stockAlbum);
 
                 // Get all photo files in the stock directory
                 File[] photoFiles = stockDir.listFiles((dir, name) -> {
@@ -520,12 +527,14 @@ public class HomeActivity extends AppCompatActivity {
                         String caption = file.getName();
                         PhotoFile photo = new PhotoFile(filePath, caption);
 
-                        stockAlbum.addPhoto(photo);
+                        // Only add the photo if it doesn't already exist in the album
+                        if (!stockAlbum.getPhotos().contains(photo)) {
+                            stockAlbum.addPhoto(photo);
+                        }
                     }
                 }
 
-                albumList.add(stockAlbum);  // Add the stock album to the list
-                Log.d("AlbumListActivity", "Album List: " + albumList.toString());
+                Log.d("AlbumListActivity", "Album List after load: " + albumList.toString());
 
             } else {
                 Log.e("AlbumListActivity", "Stock directory not found or not a directory");
@@ -541,36 +550,6 @@ public class HomeActivity extends AppCompatActivity {
         albumAdapter.notifyDataSetChanged();
     }
 
-    private void copyStockPhotosIfNeeded() {
-        File stockDir = new File(getFilesDir(), "stock");
-        if (!stockDir.exists()) {
-            stockDir.mkdirs(); // Create directory if it doesn't exist
-            try {
-                AssetManager assetManager = getAssets();
-                String[] photos = assetManager.list("stock"); // List files in assets/stock
-                if (photos != null) {
-                    for (String filename : photos) {
-                        InputStream in = assetManager.open("stock/" + filename);
-                        File outFile = new File(stockDir, filename);
-                        OutputStream out = new FileOutputStream(outFile);
-
-                        byte[] buffer = new byte[1024];
-                        int read;
-                        while ((read = in.read(buffer)) != -1) {
-                            out.write(buffer, 0, read);
-                        }
-
-                        in.close();
-                        out.flush();
-                        out.close();
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Failed to copy stock photos", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
     public void addAlbumToDatabase(Album album) {
         Database.getInstance().addAlbum(album);  // Add album to Database
         Database.getInstance().save(getApplicationContext());  // Save the updated database
