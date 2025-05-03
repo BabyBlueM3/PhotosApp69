@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.group69.photosapp.Album;
 import com.group69.photosapp.Database;
+import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
 import com.group69.photosapp.Tag;
@@ -38,19 +39,15 @@ public class ViewActivity extends AppCompatActivity {
     private List<PhotoFile> photoList;
     private int currentIndex;
 
-
-    // Reference to the PhotoFile object
-    private PhotoFile photoFile;
-
     // Tag constants
     private static final String TAG_PERSON = "person";
     private static final String TAG_LOCATION = "location";
+    private static final String TAG = "ViewActivity"; // For logging
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_view);
-
 
         // Load the database to get stored tags
         Database.load(getApplicationContext());
@@ -102,7 +99,6 @@ public class ViewActivity extends AppCompatActivity {
                 currentIndex = 0;
             }
 
-            photoFile = photoList.get(currentIndex);
             loadImage();
             updateTagsDisplay();
         } else {
@@ -111,12 +107,12 @@ public class ViewActivity extends AppCompatActivity {
         }
     }
 
-
-
     private void loadImage() {
         updateTagsDisplay();
 
         try {
+            PhotoFile photoFile = photoList.get(currentIndex);
+
             // Load image from file path
             Uri imageUri = Uri.parse("file://" + photoFile.getFilePath());
             imageView.setImageURI(imageUri);
@@ -128,33 +124,29 @@ public class ViewActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
-            e.printStackTrace();
+            Log.e(TAG, "Error loading image", e);
         }
     }
 
     private void updateTagsDisplay() {
-        String personValue = findTagValue(TAG_PERSON);
-        String locationValue = findTagValue(TAG_LOCATION);
+        PhotoFile currentPhoto = photoList.get(currentIndex);
+        String personValue = findTagValue(currentPhoto, TAG_PERSON);
+        String locationValue = findTagValue(currentPhoto, TAG_LOCATION);
 
         // Update UI with tag values
         personTagValue.setText(personValue.isEmpty() ? "No person tagged" : personValue);
         locationTagValue.setText(locationValue.isEmpty() ? "No location tagged" : locationValue);
-        Log.d("ViewActivity", "PhotoFile tags: " + photoFile.getTags().size());
-
     }
 
-    private String findTagValue(String tagName) {
-        List<Tag> tags = photoFile.getTags();
-        Log.d("ViewActivity", "Looking for tag: " + tagName);  // Debugging the tag we're searching for
+    private String findTagValue(PhotoFile photo, String tagName) {
+        List<Tag> tags = photo.getTags();
         for (Tag tag : tags) {
-            Log.d("ViewActivity", "Found tag: " + tag.getTagName() + " with value: " + tag.getTagValue());
             if (tag.getTagName().equalsIgnoreCase(tagName)) {
                 return tag.getTagValue();
             }
         }
         return "";
     }
-
 
     private void setupClickListeners() {
         editPersonButton.setOnClickListener(v -> showEditTagDialog(TAG_PERSON));
@@ -163,10 +155,10 @@ public class ViewActivity extends AppCompatActivity {
         slideshowLeft.setOnClickListener(v -> showPreviousPhoto());
         slideshowRight.setOnClickListener(v -> showNextPhoto());
     }
+
     private void showNextPhoto() {
         if (currentIndex < photoList.size() - 1) {
             currentIndex++;
-            photoFile = photoList.get(currentIndex);
             loadImage();
             updateTagsDisplay();
         } else {
@@ -177,7 +169,6 @@ public class ViewActivity extends AppCompatActivity {
     private void showPreviousPhoto() {
         if (currentIndex > 0) {
             currentIndex--;
-            photoFile = photoList.get(currentIndex);
             loadImage();
             updateTagsDisplay();
         } else {
@@ -185,13 +176,12 @@ public class ViewActivity extends AppCompatActivity {
         }
     }
 
-
-
     private void showEditTagDialog(String tagType) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
         boolean isPerson = tagType.equals(TAG_PERSON);
-        String currentValue = isPerson ? findTagValue(TAG_PERSON) : findTagValue(TAG_LOCATION);
+        PhotoFile currentPhoto = photoList.get(currentIndex);
+        String currentValue = isPerson ? findTagValue(currentPhoto, TAG_PERSON) : findTagValue(currentPhoto, TAG_LOCATION);
 
         builder.setTitle(isPerson ? "Edit Person Tag" : "Edit Location Tag");
 
@@ -213,7 +203,7 @@ public class ViewActivity extends AppCompatActivity {
                 updateTag(tagType, newValue);
             }
             updateTagsDisplay();
-            savePhotoChanges();
+            savePhotoChanges(); // Save changes immediately after editing
         });
 
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
@@ -223,7 +213,7 @@ public class ViewActivity extends AppCompatActivity {
             builder.setNeutralButton("Delete", (dialog, which) -> {
                 removeTag(tagType);
                 updateTagsDisplay();
-                savePhotoChanges();
+                savePhotoChanges(); // Save changes immediately after deleting
             });
         }
 
@@ -231,7 +221,8 @@ public class ViewActivity extends AppCompatActivity {
     }
 
     private void removeTag(String tagName) {
-        List<Tag> tags = photoFile.getTags();
+        PhotoFile currentPhoto = photoList.get(currentIndex);
+        List<Tag> tags = currentPhoto.getTags();
         Tag tagToRemove = null;
 
         for (Tag tag : tags) {
@@ -242,48 +233,56 @@ public class ViewActivity extends AppCompatActivity {
         }
 
         if (tagToRemove != null) {
-            photoFile.removeTag(tagToRemove);
+            currentPhoto.removeTag(tagToRemove);
         }
     }
 
     private void updateTag(String tagName, String tagValue) {
-        // Update the tag in the photoFile
-        removeTag(tagName);  // Remove existing tag
+        PhotoFile currentPhoto = photoList.get(currentIndex);
+
+        // Remove existing tag with this name if it exists
+        removeTag(tagName);
+
+        // Add the new tag
         Tag newTag = new Tag(tagName, tagValue);
-        photoFile.addTag(newTag);
+        currentPhoto.addTag(newTag);
 
-
-        // Save the tag to the Database
+        // Save the tag to the Database for autocomplete suggestions
         if (tagName.equals(TAG_PERSON)) {
-            Database.getInstance().addPersonTag(tagValue);  // Add to person tags
+            Database.getInstance().addPersonTag(tagValue);
         } else if (tagName.equals(TAG_LOCATION)) {
-            Database.getInstance().addLocationTag(tagValue);  // Add to location tags
+            Database.getInstance().addLocationTag(tagValue);
         }
 
         // Save the updated database to disk
         Database.getInstance().save(getApplicationContext());
 
-        // Update UI
-        updateTagsDisplay();
+        Log.d(TAG, "Added tag " + tagName + "=" + tagValue + " to photo at index " + currentIndex);
     }
 
     /**
-     * Save the PhotoFile with updated tags
-     * This is a placeholder for your implementation
+     * Save the current state of the album with updated photos
      */
+//    private void savePhotoChanges() {
+//        // Save changes to PhotoData immediately
+//        if (PhotoData.getInstance() != null) {
+//            PhotoData.getInstance().saveData(getApplicationContext());
+//            Toast.makeText(this, "Tags saved", Toast.LENGTH_SHORT).show();
+//            Log.d(TAG, "Photo changes saved to PhotoData");
+//        }
+    //    }
     private void savePhotoChanges() {
         // Save the updated PhotoFile to the database
         Database.getInstance().save(getApplicationContext());
         Toast.makeText(this, "Tags saved", Toast.LENGTH_SHORT).show();
     }
 
-
     private void handleBackPressed() {
+        // When exiting, pass back the entire updated photoList
         Intent resultIntent = new Intent();
-        resultIntent.putExtra("updatedPhotoFile", photoFile);
+        resultIntent.putExtra("updatedPhotoList", new ArrayList<>(photoList));
+        resultIntent.putExtra("albumModified", true);
         setResult(RESULT_OK, resultIntent);
-        finish(); // Replace super.onBackPressed()
+        finish();
     }
-
-
 }

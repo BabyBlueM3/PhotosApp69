@@ -10,7 +10,8 @@ import android.widget.Toast;
 import android.content.Intent;
 import android.util.Log;
 
-
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -46,6 +47,8 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
     private List<PhotoFile> photoList = new ArrayList<>();
     private boolean isSelectionMode = true; // Always in selection mode now
 
+    private ActivityResultLauncher<Intent> viewPhotoLauncher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +56,40 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
 
         // Get album name from intent
         albumName = getIntent().getStringExtra("ALBUM_NAME");
+
+        // Initialize the activity result launcher
+        viewPhotoLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        // Check if album was modified
+                        if (result.getData().getBooleanExtra("albumModified", false)) {
+                            // Get the updated photo list from the result
+                            ArrayList<PhotoFile> updatedPhotoList =
+                                    (ArrayList<PhotoFile>) result.getData().getSerializableExtra("updatedPhotoList");
+
+                            if (updatedPhotoList != null && !updatedPhotoList.isEmpty()) {
+                                // Replace the album's photo list with the updated one
+                                photoList.clear();
+                                photoList.addAll(updatedPhotoList);
+                                currentAlbum.getPhotos().clear();
+                                currentAlbum.getPhotos().addAll(updatedPhotoList);
+
+                                // Refresh the adapter
+                                adapter.updatePhotoList(photoList);
+                                adapter.notifyDataSetChanged();
+
+                                // Save the changes to PhotoData
+                                if (PhotoData.getInstance() != null) {
+                                    PhotoData.getInstance().saveData(getApplicationContext());
+                                }
+
+                                Log.d("AlbumActivity", "Album updated with modified photos");
+                            }
+                        }
+                    }
+                }
+        );
 
         // In your onCreate() or similar method
         Intent intent = getIntent();
@@ -93,6 +130,14 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
         btnMove = findViewById(R.id.btn_move);
         btnDelete = findViewById(R.id.btn_delete);
         btnUpload = findViewById(R.id.btn_upload);
+
+        // Check if this is a temporary album
+        boolean isTempAlbum = getIntent().getBooleanExtra("IS_TEMP_ALBUM", false);
+        if (isTempAlbum) {
+            // Disable the upload button for temporary albums
+            btnUpload.setEnabled(false);
+            btnUpload.setAlpha(0.5f); // Visual indication that it's disabled
+        }
 
         // Initially disable buttons that require selection
         updateButtonStates(false);
@@ -202,7 +247,7 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
                     intent.putExtra("photoList", new ArrayList<>(photoList));
                     intent.putExtra("photoIndex", index);
                     intent.putExtra("photoFile", photoFile); // Send the selected photo as well
-                    startActivity(intent);
+                    viewPhotoLauncher.launch(intent); // Use the launcher instead of startActivityForResult
                 } else {
                     Toast.makeText(this, "Photo not found in album", Toast.LENGTH_SHORT).show();
                 }
@@ -327,7 +372,7 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
 
         currentAlbum.removePhoto(photo); // however you track current album
         targetAlbum.addPhoto(photo);
-        PhotoData.getInstance().saveData(); // persist if needed
+        //PhotoData.getInstance().saveData(); // persist if needed
 
         Toast.makeText(this, "Photo moved to " + targetAlbumName, Toast.LENGTH_SHORT).show();
 
@@ -414,6 +459,16 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
     public void onSelectionChanged(int count) {
         // Just update button states based on selection count
         updateButtonStates(count > 0);
+    }
+
+    @Override
+    public void onDestroy() {
+        // If this is a temporary album, remove it from PhotoData when navigating back
+        boolean isTempAlbum = getIntent().getBooleanExtra("IS_TEMP_ALBUM", false);
+        if (isTempAlbum && currentAlbum != null) {
+            PhotoData.getInstance().removeAlbum(currentAlbum);
+        }
+        super.onDestroy();
     }
 
 

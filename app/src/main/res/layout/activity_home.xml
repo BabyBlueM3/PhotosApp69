@@ -6,9 +6,9 @@
     android:layout_height="match_parent"
     tools:context="ui.HomeActivity">
 
-    <!-- Search Bar -->
+    <!-- Search Container -->
     <androidx.cardview.widget.CardView
-        android:id="@+id/search_bar_container"
+        android:id="@+id/search_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -20,12 +20,77 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.appcompat.widget.SearchView
-            android:id="@+id/search_view"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:iconifiedByDefault="false"
-            android:queryHint="Search albums" />
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <!-- Location Search Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Location:"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp"/>
+
+                <AutoCompleteTextView
+                    android:id="@+id/search_location"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Search location tags"
+                    android:completionThreshold="1"
+                    android:inputType="text"
+                    android:imeOptions="actionNext"/>
+
+                <Spinner
+                    android:id="@+id/search_operator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:entries="@array/search_operators"/>
+            </LinearLayout>
+
+            <!-- Person Search Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Person:"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp"/>
+
+                <AutoCompleteTextView
+                    android:id="@+id/search_person"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Search person tags"
+                    android:completionThreshold="1"
+                    android:inputType="text"
+                    android:imeOptions="actionSearch"/>
+
+                <Button
+                    android:id="@+id/btn_search"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Search"
+                    android:layout_marginStart="8dp"/>
+            </LinearLayout>
+        </LinearLayout>
     </androidx.cardview.widget.CardView>
 
     <!-- Albums RecyclerView -->
@@ -41,7 +106,7 @@
         app:layout_constraintBottom_toTopOf="@+id/buttons_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/search_bar_container"
+        app:layout_constraintTop_toBottomOf="@id/search_container"
         tools:listitem="@layout/item_album" />
 
     <!-- Bottom Buttons Container -->

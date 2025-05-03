@@ -6,7 +6,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,13 +20,15 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.widget.EditText;
 import android.content.Intent;
-
+import android.text.Editable;
+import android.text.TextWatcher;
 
 import com.group69.photosapp.Album;
 import com.group69.photosapp.Database;
 import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
+import com.group69.photosapp.Tag;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,15 +36,30 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class HomeActivity extends AppCompatActivity {
 
     private RecyclerView albumsRecyclerView;
     private AlbumAdapter albumAdapter;
     private List<Album> albumList;
-    private Button btnOpen, btnRename, btnDelete, btnCreate;
+    private Button btnOpen, btnRename, btnDelete, btnCreate, btnSearch;
+    private AutoCompleteTextView searchLocation, searchPerson;
+    private Spinner searchOperator;
+
+    // Sample tag data for autocomplete suggestions
+    private List<String> locationTags = new ArrayList<>(Arrays.asList(
+            "new york", "new jersey", "boston", "chicago", "san francisco",
+            "los angeles", "seattle", "miami", "denver", "austin",
+            "washington dc", "nashville", "new orleans"));
+
+    private List<String> personTags = new ArrayList<>(Arrays.asList(
+            "john", "jane", "bob", "alice", "michael", "sarah",
+            "david", "emma", "james", "olivia", "robert", "emily"));
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,27 +110,238 @@ public class HomeActivity extends AppCompatActivity {
         loadAlbums();
 
 
-        // Setup search functionality
-        SearchView searchView = findViewById(R.id.search_view);
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                filterAlbums(query);
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                filterAlbums(newText);
-                return true;
-            }
-        });
+        // Initialize search components
+        initializeSearchComponents();
 
         // Initialize buttons
         initializeButtons();
 
         // Update the button states initially
         updateButtonStates();
+    }
+
+    private void initializeSearchComponents() {
+        // Find views by ID
+        searchLocation = findViewById(R.id.search_location);
+        searchPerson = findViewById(R.id.search_person);
+        searchOperator = findViewById(R.id.search_operator);
+        btnSearch = findViewById(R.id.btn_search);
+
+        // Set up autocomplete adapters with dropdown suggestions
+        ArrayAdapter<String> locationAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_dropdown_item_1line, locationTags);
+        searchLocation.setAdapter(locationAdapter);
+        searchLocation.setThreshold(1); // Show suggestions after typing 1 character
+
+        ArrayAdapter<String> personAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_dropdown_item_1line, personTags);
+        searchPerson.setAdapter(personAdapter);
+        searchPerson.setThreshold(1); // Show suggestions after typing 1 character
+
+        // Set up dropdown for AND/OR operator
+        ArrayAdapter<CharSequence> operatorAdapter = ArrayAdapter.createFromResource(
+                this, R.array.search_operators, android.R.layout.simple_spinner_item);
+        operatorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        searchOperator.setAdapter(operatorAdapter);
+
+        // Set up text changed listeners for filtering suggestions
+        searchLocation.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterLocationSuggestions(s.toString().toLowerCase());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        searchPerson.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterPersonSuggestions(s.toString().toLowerCase());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        // Set up search button click listener
+        btnSearch.setOnClickListener(v -> performSearch());
+    }
+
+    private void filterLocationSuggestions(String query) {
+        if (query.isEmpty()) {
+            return;
+        }
+
+        List<String> filteredSuggestions = new ArrayList<>();
+        for (String location : locationTags) {
+            if (location.toLowerCase().startsWith(query)) {
+                filteredSuggestions.add(location);
+            }
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_dropdown_item_1line, filteredSuggestions);
+        searchLocation.setAdapter(adapter);
+
+        if (query.length() > 0 && !filteredSuggestions.isEmpty()) {
+            searchLocation.showDropDown();
+        }
+    }
+
+    private void filterPersonSuggestions(String query) {
+        if (query.isEmpty()) {
+            return;
+        }
+
+        List<String> filteredSuggestions = new ArrayList<>();
+        for (String person : personTags) {
+            if (person.toLowerCase().startsWith(query)) {
+                filteredSuggestions.add(person);
+            }
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_dropdown_item_1line, filteredSuggestions);
+        searchPerson.setAdapter(adapter);
+
+        if (query.length() > 0 && !filteredSuggestions.isEmpty()) {
+            searchPerson.showDropDown();
+        }
+    }
+
+    private void performSearch() {
+        String locationQuery = searchLocation.getText().toString().trim();
+        String personQuery = searchPerson.getText().toString().trim();
+        boolean isAndOperator = searchOperator.getSelectedItem().toString().equals("AND");
+
+        // Check if at least one search field is filled
+        if (locationQuery.isEmpty() && personQuery.isEmpty()) {
+            Toast.makeText(this, "Please enter at least one search term", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Find photos matching the search criteria
+        List<PhotoFile> matchedPhotos = searchPhotos(locationQuery, personQuery, isAndOperator);
+
+        if (matchedPhotos.isEmpty()) {
+            Toast.makeText(this, "No photos found matching your search", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Remove any previous temporary albums
+        for (Album album : new ArrayList<>(PhotoData.getInstance().getAlbums())) {
+            if (album.isTemporary()) {
+                PhotoData.getInstance().removeAlbum(album);
+            }
+        }
+
+        // Create a temporary album with the search results
+        String searchTitle = buildSearchTitle(locationQuery, personQuery, isAndOperator);
+        Album searchResultsAlbum = new Album(searchTitle);
+        searchResultsAlbum.setTemporary(true);
+
+        // Add matched photos to temporary album
+        for (PhotoFile photo : matchedPhotos) {
+            searchResultsAlbum.addPhoto(photo);
+        }
+
+        // Add the temporary album to PhotoData
+        PhotoData.getInstance().addAlbum(searchResultsAlbum);
+
+        // Launch AlbumActivity with the temp album
+        Intent intent = new Intent(HomeActivity.this, AlbumActivity.class);
+        intent.putExtra("ALBUM_NAME", searchResultsAlbum.getName());
+        intent.putExtra("IS_TEMP_ALBUM", true);
+        startActivity(intent);
+
+        // Clear search fields after search is performed
+        searchLocation.setText("");
+        searchPerson.setText("");
+    }
+
+    private String buildSearchTitle(String locationQuery, String personQuery, boolean isAndOperator) {
+        StringBuilder title = new StringBuilder("Search Results: ");
+
+        if (!locationQuery.isEmpty() && !personQuery.isEmpty()) {
+            title.append("Location:").append(locationQuery)
+                    .append(" ").append(isAndOperator ? "AND" : "OR")
+                    .append(" Person:").append(personQuery);
+        } else if (!locationQuery.isEmpty()) {
+            title.append("Location:").append(locationQuery);
+        } else {
+            title.append("Person:").append(personQuery);
+        }
+
+        return title.toString();
+    }
+
+    private List<PhotoFile> searchPhotos(String locationQuery, String personQuery, boolean isAndOperator) {
+        Set<PhotoFile> resultSet = new HashSet<>();
+
+        // Search through all albums for matching photos
+        for (Album album : PhotoData.getInstance().getAlbums()) {
+            // Skip temporary albums
+            if (album.isTemporary()) {
+                continue;
+            }
+
+            for (PhotoFile photo : album.getPhotos()) {
+                // If both fields are filled, apply AND/OR logic
+                if (!locationQuery.isEmpty() && !personQuery.isEmpty()) {
+                    boolean locationMatch = hasLocationTag(photo, locationQuery);
+                    boolean personMatch = hasPersonTag(photo, personQuery);
+
+                    if ((isAndOperator && locationMatch && personMatch) ||
+                            (!isAndOperator && (locationMatch || personMatch))) {
+                        resultSet.add(photo);
+                    }
+                }
+                // If only location is filled, only check location
+                else if (!locationQuery.isEmpty()) {
+                    if (hasLocationTag(photo, locationQuery)) {
+                        resultSet.add(photo);
+                    }
+                }
+                // If only person is filled, only check person
+                else if (!personQuery.isEmpty()) {
+                    if (hasPersonTag(photo, personQuery)) {
+                        resultSet.add(photo);
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<>(resultSet);
+    }
+
+    private boolean hasLocationTag(PhotoFile photo, String location) {
+        // Check if the photo has the location tag
+        for (Tag tag : photo.getTags()) {
+            if (tag.getTagName().equals("location") &&
+                    tag.getTagValue().toLowerCase().contains(location.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasPersonTag(PhotoFile photo, String person) {
+        // Check if the photo has the person tag
+        for (Tag tag : photo.getTags()) {
+            if (tag.getTagName().equals("person") &&
+                    tag.getTagValue().toLowerCase().contains(person.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -246,29 +477,6 @@ public class HomeActivity extends AppCompatActivity {
                 builder.show();
             }
         });
-
-    }
-
-    // TODO change this to be search images rather than filter albums
-    private void filterAlbums(String query) {
-        // Filter albums based on search query
-        // This is just a placeholder implementation
-        List<Album> filteredList = new ArrayList<>();
-
-        if (query.isEmpty()) {
-            filteredList.addAll(albumList);
-        } else {
-            String lowerCaseQuery = query.toLowerCase();
-
-            for (Album album : albumList) {
-                if (album.getName().toLowerCase().contains(lowerCaseQuery)) {
-                    filteredList.add(album);
-                }
-            }
-        }
-
-        albumAdapter.updateAlbums(filteredList);
-        updateButtonStates();
     }
 
     /**
@@ -311,8 +519,8 @@ public class HomeActivity extends AppCompatActivity {
                         String filePath = file.getAbsolutePath();
                         String caption = file.getName();
                         PhotoFile photo = new PhotoFile(filePath, caption);
+
                         stockAlbum.addPhoto(photo);
-                        System.out.println(photo);
                     }
                 }
 
@@ -364,7 +572,6 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
     public void addAlbumToDatabase(Album album) {
-        System.out.println("fuck");
         Database.getInstance().addAlbum(album);  // Add album to Database
         Database.getInstance().save(getApplicationContext());  // Save the updated database
     }

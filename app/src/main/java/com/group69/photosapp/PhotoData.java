@@ -1,5 +1,7 @@
 package com.group69.photosapp;
 
+import android.content.Context;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,10 @@ public class PhotoData implements Serializable {
         albums.removeIf(album -> album.getName().equals(albumName));
     }
 
+    public void removeAlbum(Album albumToRemove) {
+        albums.remove(albumToRemove);
+    }
+
     public Album getAlbumByName(String name) {
         for (Album album : albums) {
             if (album.getName().equals(name)) {
@@ -44,8 +50,10 @@ public class PhotoData implements Serializable {
 
 
     // Stubbed for now, implement file I/O if needed later
-    public void saveData() {
-        // TODO: persist albums to storage (e.g., JSON or serialized file)
+    public void saveData(Context context) {
+        // Save the data to the Database
+        Database.getInstance().setAlbums(new ArrayList<>(getAlbums()));
+        Database.getInstance().save(context);
     }
 
     public void loadData() {
