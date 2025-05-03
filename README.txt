@@ -125,3 +125,5 @@ This time, Claude decided to only create the activity_view.xml file (which is ac
 
 It got right to work, and also created the edit tag dialogue box for me as well. 
 For #3, I decided to just make them myself. Was pretty simple, although I had to figure out that the layout had to be constrained on both axis, not just to the bottom. 
+
+Update: I forgot to keep updating this. I ended up having to use 4 different google accounts just to fit what i needed in the contexts/free message limits
