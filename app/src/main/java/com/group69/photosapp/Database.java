@@ -1,10 +1,13 @@
 package com.group69.photosapp;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 public class Database implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -100,4 +103,6 @@ public class Database implements Serializable {
     public void removeLocationTag(String tag) {
         locationTags.remove(tag);
     }
+
+
 }

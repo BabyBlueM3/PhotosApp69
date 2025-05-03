@@ -89,6 +89,7 @@ public class HomeActivity extends AppCompatActivity {
         // Load the albums into the album list
         loadAlbums();
 
+
         // Setup search functionality
         SearchView searchView = findViewById(R.id.search_view);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {

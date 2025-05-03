@@ -114,6 +114,8 @@ public class ViewActivity extends AppCompatActivity {
 
 
     private void loadImage() {
+        updateTagsDisplay();
+
         try {
             // Load image from file path
             Uri imageUri = Uri.parse("file://" + photoFile.getFilePath());
@@ -137,17 +139,22 @@ public class ViewActivity extends AppCompatActivity {
         // Update UI with tag values
         personTagValue.setText(personValue.isEmpty() ? "No person tagged" : personValue);
         locationTagValue.setText(locationValue.isEmpty() ? "No location tagged" : locationValue);
+        Log.d("ViewActivity", "PhotoFile tags: " + photoFile.getTags().size());
+
     }
 
     private String findTagValue(String tagName) {
         List<Tag> tags = photoFile.getTags();
+        Log.d("ViewActivity", "Looking for tag: " + tagName);  // Debugging the tag we're searching for
         for (Tag tag : tags) {
+            Log.d("ViewActivity", "Found tag: " + tag.getTagName() + " with value: " + tag.getTagValue());
             if (tag.getTagName().equalsIgnoreCase(tagName)) {
                 return tag.getTagValue();
             }
         }
         return "";
     }
+
 
     private void setupClickListeners() {
         editPersonButton.setOnClickListener(v -> showEditTagDialog(TAG_PERSON));
@@ -245,13 +252,12 @@ public class ViewActivity extends AppCompatActivity {
         Tag newTag = new Tag(tagName, tagValue);
         photoFile.addTag(newTag);
 
+
         // Save the tag to the Database
         if (tagName.equals(TAG_PERSON)) {
             Database.getInstance().addPersonTag(tagValue);  // Add to person tags
-            System.out.println("savvvveeee");
         } else if (tagName.equals(TAG_LOCATION)) {
             Database.getInstance().addLocationTag(tagValue);  // Add to location tags
-            System.out.println("dasfasdfasdf");
         }
 
         // Save the updated database to disk
@@ -266,11 +272,11 @@ public class ViewActivity extends AppCompatActivity {
      * This is a placeholder for your implementation
      */
     private void savePhotoChanges() {
-        // TODO: Implement saving the updated PhotoFile
-        // This could involve your app's data storage mechanism
-
+        // Save the updated PhotoFile to the database
+        Database.getInstance().save(getApplicationContext());
         Toast.makeText(this, "Tags saved", Toast.LENGTH_SHORT).show();
     }
+
 
     private void handleBackPressed() {
         Intent resultIntent = new Intent();
