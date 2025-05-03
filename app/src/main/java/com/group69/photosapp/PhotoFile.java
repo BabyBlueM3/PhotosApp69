@@ -70,11 +70,45 @@ public class PhotoFile implements Serializable {
     }
 
     public void addTag(Tag tag) {
+        // Check if a tag with this name already exists
+        Tag existingTag = findTagByName(tag.getTagName());
+        if (existingTag != null) {
+            // Remove the existing tag first
+            tags.remove(existingTag);
+        }
+
+        // Add the new tag
         this.tags.add(tag);
     }
 
     public void removeTag(Tag tag) {
         this.tags.remove(tag);
+    }
+
+    /**
+     * Find a tag by its name
+     * @param tagName Name of the tag to find
+     * @return Tag object if found, null otherwise
+     */
+    public Tag findTagByName(String tagName) {
+        if (tagName == null) return null;
+
+        for (Tag tag : tags) {
+            if (tag.getTagName().equalsIgnoreCase(tagName)) {
+                return tag;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get the value of a tag by name
+     * @param tagName Name of the tag
+     * @return Tag value or empty string if not found
+     */
+    public String getTagValue(String tagName) {
+        Tag tag = findTagByName(tagName);
+        return tag != null ? tag.getTagValue() : "";
     }
 
     @Override

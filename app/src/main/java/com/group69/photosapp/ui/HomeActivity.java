@@ -29,6 +29,7 @@ import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
 import com.group69.photosapp.Tag;
+import com.group69.photosapp.TagManager;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -51,10 +52,46 @@ public class HomeActivity extends AppCompatActivity {
     private AutoCompleteTextView searchLocation, searchPerson;
     private Spinner searchOperator;
 
-    // Sample tag data for autocomplete suggestions
-    private ArrayList<String> locationTags;
+    // Tag data for autocomplete suggestions
+    public ArrayList<String> locationTags;
 
-    private ArrayList<String> personTags;
+    public ArrayList<String> personTags;
+
+    // Keep track of our adapters for autocomplete to update them
+    private ArrayAdapter<String> locationAdapter;
+    private ArrayAdapter<String> personAdapter;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Refresh the tag lists and adapters when returning to this activity
+        refreshAutocompleteSuggestions();
+    }
+
+    /**
+     * Refreshes the autocomplete suggestions by updating the tag lists and adapters
+     */
+    private void refreshAutocompleteSuggestions() {
+        // Refresh the tag lists from the database
+        locationTags = Database.getInstance().getLocationTags();
+        personTags = Database.getInstance().getPersonTags();
+
+        Log.d("HomeActivity", "Refreshed tags - Locations: " + locationTags.size() + ", Persons: " + personTags.size());
+
+        // Update the adapters with the refreshed lists
+        if (locationAdapter != null) {
+            locationAdapter = new ArrayAdapter<>(
+                    this, android.R.layout.simple_dropdown_item_1line, locationTags);
+            searchLocation.setAdapter(locationAdapter);
+        }
+
+        if (personAdapter != null) {
+            personAdapter = new ArrayAdapter<>(
+                    this, android.R.layout.simple_dropdown_item_1line, personTags);
+            searchPerson.setAdapter(personAdapter);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,14 +101,18 @@ public class HomeActivity extends AppCompatActivity {
         // Load the database from storage (only once)
         Database.load(getApplicationContext());
 
+        // Initialize tag counts for autocomplete
+        TagManager.initializeTagCounts();
+
         // Initialize the RecyclerView
         albumsRecyclerView = findViewById(R.id.albums_recycler_view);
 
         // Set layout manager (2 columns grid)
         albumsRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
 
-
-
+        if (albumList == null) {
+            albumList = new ArrayList<>();
+        }
 
         // Access the albums from the database (if any)
         ArrayList<Album> storedAlbums = Database.getInstance().getAlbums();
@@ -81,14 +122,12 @@ public class HomeActivity extends AppCompatActivity {
                 if (!albumList.contains(album)) {
                     albumList.add(album);
                 }
-
             }
         }
 
         // Load the autocomplete lists
         locationTags = Database.getInstance().getLocationTags();
         personTags = Database.getInstance().getPersonTags();
-
 
         // Initialize and set adapter
         albumAdapter = new AlbumAdapter(this, albumList);

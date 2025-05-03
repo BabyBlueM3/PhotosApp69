@@ -22,6 +22,7 @@ import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
 import com.group69.photosapp.Tag;
+import com.group69.photosapp.TagManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -195,15 +196,28 @@ public class ViewActivity extends AppCompatActivity {
         // Set up the buttons
         builder.setPositiveButton("Save", (dialog, which) -> {
             String newValue = input.getText().toString().trim();
-            if (newValue.isEmpty()) {
-                // Remove tag if value is empty
-                removeTag(tagType);
-            } else {
-                // Update or add the tag
-                updateTag(tagType, newValue);
+
+            // Check if we're changing the tag
+            boolean isChangingTag = !currentValue.equals(newValue);
+
+            if (isChangingTag) {
+                // If current value exists, remove it from tag count
+                if (!currentValue.isEmpty()) {
+                    removeTag(tagType, currentValue);
+                }
+
+                // Add the new tag if not empty
+                if (!newValue.isEmpty()) {
+                    // Update or add the tag
+                    updateTag(tagType, newValue);
+                } else {
+                    // Remove tag if value is empty
+                    removeTag(tagType);
+                }
+
+                updateTagsDisplay();
+                savePhotoChanges(); // Save changes immediately after editing
             }
-            updateTagsDisplay();
-            savePhotoChanges(); // Save changes immediately after editing
         });
 
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
@@ -233,8 +247,17 @@ public class ViewActivity extends AppCompatActivity {
         }
 
         if (tagToRemove != null) {
+            // Remove the tag from autocomplete if it's the last occurrence
+            TagManager.removeTag(getApplicationContext(), tagToRemove.getTagName(), tagToRemove.getTagValue());
+
+            // Remove the tag from the photo
             currentPhoto.removeTag(tagToRemove);
         }
+    }
+
+    private void removeTag(String tagName, String tagValue) {
+        // This is used when changing tags - just decrease the count
+        TagManager.removeTag(getApplicationContext(), tagName, tagValue);
     }
 
     private void updateTag(String tagName, String tagValue) {
@@ -247,30 +270,12 @@ public class ViewActivity extends AppCompatActivity {
         Tag newTag = new Tag(tagName, tagValue);
         currentPhoto.addTag(newTag);
 
-        // Save the tag to the Database for autocomplete suggestions
-        if (tagName.equals(TAG_PERSON)) {
-            Database.getInstance().addPersonTag(tagValue);
-        } else if (tagName.equals(TAG_LOCATION)) {
-            Database.getInstance().addLocationTag(tagValue);
-        }
-
-        // Save the updated database to disk
-        Database.getInstance().save(getApplicationContext());
+        // Add to TagManager to update autocomplete lists
+        TagManager.addTag(getApplicationContext(), tagName, tagValue);
 
         Log.d(TAG, "Added tag " + tagName + "=" + tagValue + " to photo at index " + currentIndex);
     }
 
-    /**
-     * Save the current state of the album with updated photos
-     */
-//    private void savePhotoChanges() {
-//        // Save changes to PhotoData immediately
-//        if (PhotoData.getInstance() != null) {
-//            PhotoData.getInstance().saveData(getApplicationContext());
-//            Toast.makeText(this, "Tags saved", Toast.LENGTH_SHORT).show();
-//            Log.d(TAG, "Photo changes saved to PhotoData");
-//        }
-    //    }
     private void savePhotoChanges() {
         // Save the updated PhotoFile to the database
         Database.getInstance().save(getApplicationContext());

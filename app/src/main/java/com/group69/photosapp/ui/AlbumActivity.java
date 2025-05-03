@@ -20,10 +20,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.group69.photosapp.Album;
 import com.group69.photosapp.Database;
-import com.group69.photosapp.PhotoAdapter;
 import com.group69.photosapp.PhotoData;
 import com.group69.photosapp.PhotoFile;
 import com.group69.photosapp.R;
+import com.group69.photosapp.TagManager;
+
 import java.io.File;
 
 import java.io.FileOutputStream;
@@ -277,12 +278,36 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnI
 
     // Show delete confirmation dialog
     private void showDeleteConfirmationDialog(List<PhotoFile> photos) {
+        if (photos == null || photos.isEmpty()) return;
+
+        PhotoFile photoToDelete = photos.get(0);  // Only one photo expected
+
         new AlertDialog.Builder(this)
                 .setTitle("Delete Photo")
                 .setMessage("Are you sure you want to delete this photo?")
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    // TODO: Implement photo deletion
-                    Toast.makeText(this, "Delete functionality to be implemented", Toast.LENGTH_SHORT).show();
+                    // Get album from intent
+                    String albumName = getIntent().getStringExtra("ALBUM_NAME");
+                    Album album = PhotoData.getInstance().getAlbumByName(albumName);
+
+                    if (album != null) {
+                        // Process all tags in the photo to update tag counts
+                        TagManager.handlePhotoDeleted(getApplicationContext(), photoToDelete);
+
+                        // Remove photo from album
+                        album.removePhoto(photoToDelete);
+
+                        // Update adapter/UI
+                        adapter.updatePhotos(album.getPhotos());
+                        adapter.clearSelection();
+
+                        // Save updated album list to database
+                        Database.getInstance().save(getApplicationContext());
+
+                        Toast.makeText(this, "Photo deleted", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Album not found", Toast.LENGTH_SHORT).show();
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();

@@ -1,4 +1,4 @@
-package com.group69.photosapp;
+package com.group69.photosapp.ui;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -11,6 +11,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.group69.photosapp.PhotoFile;
+import com.group69.photosapp.R;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -145,7 +148,12 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
             listener.onSelectionChanged(0);
         }
     }
-    
+
+    public void updatePhotos(List<PhotoFile> newPhotos) {
+        this.photoList = newPhotos;
+        notifyDataSetChanged();
+    }
+
     // Update the data set
     public void updatePhotoList(List<PhotoFile> newPhotoList) {
         this.photoList = newPhotoList;
